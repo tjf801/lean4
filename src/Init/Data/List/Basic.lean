@@ -69,13 +69,13 @@ namespace List
 
 /-! ### set -/
 
-@[simp] theorem length_set (as : List α) (i : Nat) (a : α) : (as.set i a).length = as.length := by
-  induction as generalizing i with
+@[simp] theorem length_set (as : List α) (i : Nat) (a : α) : (as.set i a).length = as.length :=
+  match as with
   | nil => rfl
-  | cons x xs ih =>
-    cases i with
-    | zero => rfl
-    | succ i => simp [set, ih]
+  | cons _ as' =>
+    match i with
+    | Nat.zero => rfl
+    | Nat.succ i' => congrArg Nat.succ (length_set as' i' _)
 
 /-! ### foldl -/
 
@@ -85,10 +85,10 @@ namespace List
 
 /-! ### concat -/
 
-@[simp] theorem length_concat (as : List α) (a : α) : (concat as a).length = as.length + 1 := by
-  induction as with
+@[simp] theorem length_concat (as : List α) (a : α) : (concat as a).length = as.length + 1 :=
+  match as with
   | nil => rfl
-  | cons _ xs ih => simp [concat, ih]
+  | cons _ as' => congrArg Nat.succ (length_concat as' a)
 
 theorem of_concat_eq_concat {as bs : List α} {a b : α} (h : as.concat a = bs.concat b) : as = bs ∧ a = b := by
   match as, bs with
@@ -480,30 +480,31 @@ instance : Append (List α) := ⟨List.append⟩
 @[simp] theorem nil_append (as : List α) : [] ++ as = as := rfl
 @[simp] theorem cons_append (a : α) (as bs : List α) : (a::as) ++ bs = a::(as ++ bs) := rfl
 
-@[simp] theorem append_nil (as : List α) : as ++ [] = as := by
-  induction as with
+@[simp] theorem append_nil (as : List α) : as ++ [] = as :=
+  match as with
   | nil => rfl
-  | cons a as ih =>
-    simp_all only [HAppend.hAppend, Append.append, List.append]
+  | cons a as' => congrArg (cons a) (append_nil as')
 
 instance : Std.LawfulIdentity (α := List α) (· ++ ·) [] where
   left_id := nil_append
   right_id := append_nil
 
-@[simp] theorem length_append (as bs : List α) : (as ++ bs).length = as.length + bs.length := by
-  induction as with
-  | nil => simp
-  | cons _ as ih => simp [ih, Nat.succ_add]
+@[simp] theorem length_append (as bs : List α) : (as ++ bs).length = as.length + bs.length :=
+  match as with
+  | nil => Nat.zero_add _ ▸ congrArg length (nil_append bs)
+  | cons _ as' => Nat.succ_add _ _ ▸ congrArg Nat.succ (length_append as' bs)
 
-@[simp] theorem append_assoc (as bs cs : List α) : (as ++ bs) ++ cs = as ++ (bs ++ cs) := by
-  induction as with
+theorem append_assoc (as bs cs : List α) : (as ++ bs) ++ cs = as ++ (bs ++ cs) :=
+  match as with
   | nil => rfl
-  | cons a as ih => simp [ih]
+  | cons a as' => congrArg (cons a) (append_assoc as' bs cs)
 
 instance : Std.Associative (α := List α) (· ++ ·) := ⟨append_assoc⟩
 
-theorem append_cons (as : List α) (b : α) (bs : List α) : as ++ b :: bs = as ++ [b] ++ bs := by
-  simp
+theorem append_cons (as : List α) (b : α) (bs : List α) : as ++ b :: bs = as ++ [b] ++ bs :=
+  match as with
+  | nil => rfl
+  | cons a as => congrArg (cons a) (append_cons as b bs)
 
 @[simp] theorem concat_eq_append (as : List α) (a : α) : as.concat a = as ++ [a] := by
   induction as <;> simp [concat, *]
@@ -569,10 +570,10 @@ def replicate : (n : Nat) → (a : α) → List α
 @[simp] theorem replicate_zero : replicate 0 a = [] := rfl
 theorem replicate_succ (a : α) (n) : replicate (n+1) a = a :: replicate n a := rfl
 
-@[simp] theorem length_replicate (n : Nat) (a : α) : (replicate n a).length = n := by
-  induction n with
-  | zero => simp
-  | succ n ih => simp only [ih, replicate_succ, length_cons, Nat.succ_eq_add_one]
+@[simp] theorem length_replicate (n : Nat) (a : α) : (replicate n a).length = n :=
+  match n with
+  | Nat.zero => rfl
+  | Nat.succ n' => congrArg Nat.succ (length_replicate n' a)
 
 /-! ## List membership
 
@@ -814,12 +815,10 @@ def dropLast {α} : List α → List α
 @[simp] theorem dropLast_cons₂ :
     (x::y::zs).dropLast = x :: (y::zs).dropLast := rfl
 
-@[simp] theorem length_dropLast_cons (a : α) (as : List α) : (a :: as).dropLast.length = as.length := by
+@[simp] theorem length_dropLast_cons (a : α) (as : List α) : (a :: as).dropLast.length = as.length :=
   match as with
-  | []       => rfl
-  | b::bs =>
-    have ih := length_dropLast_cons b bs
-    simp [dropLast, ih]
+  | nil => rfl
+  | cons _ _ => congrArg Nat.succ (length_dropLast_cons _ _)
 
 /-! ### isPrefixOf -/
 
